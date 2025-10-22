@@ -3,12 +3,12 @@ import React, { useState } from "react";
 const faltasAdministrativas = [
   "Alteración al orden público",
   "Realizar necesidades fisiológicas en vía pública",
-  "Realizar en cruceros actividades que pongan en riesgo la integridad física",
+  "Realizar actividades que pongan en riesgo la integridad física",
   "Ingerir bebidas embriagantes en vía pública",
   "Inhalar sustancias tóxicas en vía pública",
   "Pega de propaganda",
   "Faltas a la moral",
-  "Arrojar en lugares no autorizados animales muertos, escombros y desperdicios",
+  "Arrojar basura en la vía pública",
   "Daños a los bienes del municipio",
   "Dañar, podar o talar árboles",
   "Trepar bardas o cualquier inmueble ajeno sin autorización",
@@ -174,33 +174,56 @@ const oficialesList = [
 
 export default function ArrestModal({ person, onClose, onSave }) {
   const [formData, setFormData] = useState({
-    falta_administrativa: "",
+    faltas_administrativas: [{ id: Date.now(), value: '', otro: '' }], // Ahora es un array
     comunidad: "",
-    turno: "",
     arresting_officer: "",
     folio: "",
     rnd: "",
     sentencia: "",
-    otra_falta: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData((prev) => {
+      const newState = { ...prev, [name]: value };
+      // If turno changes, reset arresting_officer
+      if (name === "turno") {
+        newState.arresting_officer = "";
+      }
+      return newState;
+    });
+  };
+
+  // ===== MANEJO DE FALTAS MÚLTIPLES =====
+  const handleAddFalta = () => {
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
-      ...(name === "turno" ? { arresting_officer: "" } : {}),
+      faltas_administrativas: [...prev.faltas_administrativas, { id: Date.now(), value: '', otro: '' }]
     }));
   };
+
+  const handleRemoveFalta = (idToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      faltas_administrativas: prev.faltas_administrativas.filter(falta => falta.id !== idToRemove)
+    }));
+  };
+
+  const handleFaltaChange = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      faltas_administrativas: prev.faltas_administrativas.map(falta =>
+        falta.id === id ? { ...falta, [field]: value } : falta
+      )
+    }));
+  };
+  // =======================================
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (
-      !formData.falta_administrativa.trim() ||
-      !formData.comunidad.trim() ||
-      (formData.falta_administrativa === "Otro" && !formData.otra_falta.trim())
-    ) {
+    const faltasArray = formData.faltas_administrativas.map(f => f.value === 'Otro' ? f.otro.trim() : f.value.trim()).filter(Boolean);
+    if (faltasArray.length === 0 || !formData.comunidad.trim()) {
       alert("Debes llenar Falta administrativa y Comunidad");
       return;
     }
@@ -208,9 +231,7 @@ export default function ArrestModal({ person, onClose, onSave }) {
     const dataToSend = {
       person_id: person.id,
       falta_administrativa:
-        formData.falta_administrativa === "Otro"
-          ? formData.otra_falta.trim()
-          : formData.falta_administrativa.trim(),
+        faltasArray.join(', '), // Unir todas las faltas en una cadena
       comunidad: formData.comunidad.trim(),
       arresting_officer: formData.arresting_officer.trim() || null,
       folio: formData.folio.trim() || null,
@@ -221,10 +242,17 @@ export default function ArrestModal({ person, onClose, onSave }) {
     onSave(dataToSend);
   };
 
-  const turnos = [...new Set(oficialesList.map((o) => o.turno))];
+  // Note: formData.turno is not directly used in the state, but it's derived from the selected officer's turno.
+  // We need to manage the selected turno for filtering purposes.
+  const [selectedTurno, setSelectedTurno] = useState("");
   const oficialesFiltrados = oficialesList.filter(
-    (o) => o.turno === formData.turno
+    (o) => o.turno === selectedTurno
   );
+
+  const turnos = [...new Set(oficialesList.map(o => o.turno))];
+
+  // Ordenar alfabéticamente las comunidades
+  const comunidadesOrdenadas = [...comunidadesArresto].sort((a, b) => a.localeCompare(b));
 
   return (
     <div style={styles.overlay} onClick={onClose}>
@@ -256,37 +284,59 @@ export default function ArrestModal({ person, onClose, onSave }) {
         {/* Formulario */}
         <form onSubmit={handleSubmit} style={styles.form}>
           {/* Falta administrativa */}
-          <div style={styles.field}>
-            <label style={styles.label}>
-              <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px' }}>gavel</span>
-              Falta Administrativa *</label>
-            <select
-              name="falta_administrativa"
-              value={formData.falta_administrativa}
-              onChange={handleChange}
-              style={styles.select}
-              required
-            >
-              <option value="">Selecciona una opción</option>
-              {faltasAdministrativas.map((falta) => (
-                <option key={falta} value={falta}>{falta}</option>
-              ))}
-            </select>
-          </div>
+          <div style={{ marginTop: '0.5rem' }}>
+            {formData.faltas_administrativas.map((faltaItem, index) => (
+              <div key={faltaItem.id} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={styles.field}>
+                    <label style={styles.label}>
+                      <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px' }}>gavel</span>
+                      Falta Administrativa #{index + 1} *
+                    </label>
+                    <select
+                      value={faltaItem.value}
+                      onChange={(e) => handleFaltaChange(faltaItem.id, 'value', e.target.value)}
+                      style={styles.select}
+                      required
+                    >
+                      <option value="">Selecciona una opción</option>
+                      {faltasAdministrativas.map(falta => (
+                        <option key={falta} value={falta}>{falta}</option>
+                      ))}
+                    </select>
+                    {faltaItem.value === "Otro" && (
+                      <input
+                        value={faltaItem.otro}
+                        onChange={(e) => handleFaltaChange(faltaItem.id, 'otro', e.target.value)}
+                        style={{ ...styles.input, marginTop: '0.5rem' }}
+                        placeholder="Especifica la falta administrativa"
+                        required
+                      />
+                    )}
+                  </div>
+                </div>
+                {formData.faltas_administrativas.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFalta(faltaItem.id)}
+                    style={{ ...styles.removeButton, marginTop: '2.1rem' }}
+                    title="Eliminar falta"
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                )}
+              </div>
+            ))}
 
-          {formData.falta_administrativa === "Otro" && (
-            <div style={styles.field}>
-              <label style={styles.label}>Especificar Falta *</label>
-              <input
-                name="otra_falta"
-                placeholder="Describe la falta administrativa"
-                value={formData.otra_falta}
-                onChange={handleChange}
-                style={styles.input}
-                required
-              />
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={handleAddFalta}
+              style={{ ...styles.addButton, marginTop: '0.5rem' }}
+            >
+              <span className="material-symbols-outlined">add</span>
+              Añadir otra falta
+            </button>
+          </div>
 
           {/* Comunidad */}
           <div style={styles.field}>
@@ -301,7 +351,7 @@ export default function ArrestModal({ person, onClose, onSave }) {
               required
             >
               <option value="">Selecciona una comunidad</option>
-              {comunidadesArresto.map((comunidad) => (
+              {comunidadesOrdenadas.map((comunidad) => (
                 <option key={comunidad} value={comunidad}>
                   {comunidad}
                 </option>
@@ -314,13 +364,16 @@ export default function ArrestModal({ person, onClose, onSave }) {
             <div style={styles.field}>
               <label style={styles.label}>
                 <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px' }}>access_time</span>
-                Turno *</label>
+                Turno</label>
               <select
                 name="turno"
-                value={formData.turno}
-                onChange={handleChange}
+                value={selectedTurno}
+                onChange={(e) => {
+                  setSelectedTurno(e.target.value);
+                  setFormData(prev => ({ ...prev, arresting_officer: '' })); // Reset officer when turno changes
+                }}
                 style={styles.select}
-                required
+                // required // Make required if you want to enforce selecting a turno
               >
                 <option value="">Seleccione un turno</option>
                 {turnos.map((t, index) => (
@@ -334,14 +387,13 @@ export default function ArrestModal({ person, onClose, onSave }) {
             <div style={styles.field}>
               <label style={styles.label}>
                 <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px' }}>local_police</span>
-                Oficial *</label>
+                Oficial</label>
               <select
                 name="arresting_officer"
                 value={formData.arresting_officer}
                 onChange={handleChange}
                 style={{
-                  ...styles.select,
-                  ...((!formData.turno) ? styles.selectDisabled : {})
+                  ...styles.select, ...(!selectedTurno ? styles.selectDisabled : {})
                 }}
                 required
                 disabled={!formData.turno}
@@ -609,6 +661,38 @@ const styles = {
     transition: "all 0.2s ease",
     outline: "none",
     display: "flex",
+    alignItems: "center",
+    gap: "0.5rem"
+  },
+
+  addButton: {
+    background: 'rgba(79, 172, 254, 0.2)',
+    color: '#fff',
+    border: '2px dashed rgba(79, 172, 254, 0.5)',
+    borderRadius: '10px',
+    padding: '0.75rem 1.5rem',
+    fontSize: '0.95rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
+    transition: 'all 0.3s ease',
+    width: '100%',
+  },
+
+  removeButton: {
+    background: 'rgba(245, 87, 108, 0.2)',
+    color: '#f5576c',
+    border: 'none',
+    borderRadius: '10px',
+    width: '45px',
+    height: '45px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: "pointer",
     alignItems: "center",
     gap: "0.5rem"
   },
