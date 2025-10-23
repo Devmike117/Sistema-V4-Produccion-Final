@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { API_BASE_URL } from '../apiConfig';
+import { API_BASE_URL } from '../config';
 
 const PersonReport = ({ reportData, onBack }) => {
   if (!reportData) return null;

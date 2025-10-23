@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import FacialCapture from "./FacialCapture";
 import ArrestModal from "./ArrestModal";
-import { API_BASE_URL } from "../apiConfig"; // Importar la URL base
+import { API_BASE_URL } from "../config"; // Importar la URL base
 
 export default function FacialSearch({ onMessage }) {
   const [photoFile, setPhotoFile] = useState(null);

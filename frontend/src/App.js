@@ -10,7 +10,7 @@ import SearchPeople from "./components/SearchPeople";
 import Login from "./components/Login";
 import './styles/global.css';
 import HistoryArrestModal from "./components/HistoryArrestModal";
-import { API_BASE_URL } from "./apiConfig"; // Importar la URL base
+import { API_BASE_URL } from "./config"; // Importar la URL base
 
 function App() {
   const [loading, setLoading] = useState(true);

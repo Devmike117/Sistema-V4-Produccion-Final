@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { EMBEDDING_API_URL } from '../config'; // Importamos la URL de embeddings
+import { EMBEDDING_API_URL } from '../config';
 
 export default function FacialCapture({ photoFile, setPhotoFile, onMessage }) {
   const videoRef = useRef(null);

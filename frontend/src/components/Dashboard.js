@@ -3,7 +3,7 @@ import { Bar, Pie } from "react-chartjs-2";
 import "chart.js/auto";
 import DashboardModal from "./DashboardModal";
 import PersonReport from "./PersonReport";
-import { API_BASE_URL } from "../apiConfig"; // Importar la URL base
+import { API_BASE_URL } from "../config"; // Importar la URL base
 import DashboardReport from "./DashboardReport"; // Importar el nuevo componente
 
 // Componente CustomSelect mejorado

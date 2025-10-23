@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import ArrestModal from './ArrestModal';
 import HistoryArrestModal from './HistoryArrestModal';
-import { API_BASE_URL } from '../apiConfig'; // Importar la URL base
+import { API_BASE_URL } from '../config'; // Importar la URL base
 
 const SearchPeople = () => {
   const [firstName, setFirstName] = useState('');
